@@ -1,0 +1,552 @@
+@RestController
+@RequestMapping(value="/Train")
+public class GuestdetailsController {
+
+	@Autowired
+	private GuestdetailsService service;
+	
+//	@Autowired
+	//private RegisterService regservice;
+	
+	@Autowired
+	private DemoService demoservice;
+	
+	@Autowired
+	private AdminService adminservice;
+	
+	@Autowired
+	private BookingController bookingcontroller;
+	
+	@Autowired
+	private PNRservice pnrservice;
+
+	@PostMapping(value="/addtrain")
+	public String Addtrain(@RequestBody Trainhistory train) {
+		String result="nothing happened";
+		try {
+			if(train.getTrain_name()=="" || train.getTrain_name()==null || train.getAvg_cost()==0) {
+				throw new TrainException("train name should not be empty");
+			}else if(Checkbytrainname(train.getTrain_name().toLowerCase())) {
+				throw new TrainException("Train name already exists");
+			}else if( train.getRoute()==null) {
+				throw new TrainException("route should be defined");
+			}else if(train.getRoute()!=null) {
+				if(train.getRoute().size()<=1) {
+					throw new TrainException("minimum two station should be added");
+				}
+			}
+		}catch(TrainException e) {
+			result=e.getMessage();
+		}
+		if(result.equals("nothing happened")) {
+			train.setTrain_name(train.getTrain_name().toLowerCase());
+			train.setFrom(train.getRoute().get(0));
+			train.setTo(train.getRoute().get(train.getRoute().size()-1));
+			ArrayList<String> stations=new ArrayList<>();
+			for(int i=0;i<train.getRoute().size();i++) {
+				stations.add(train.getRoute().get(i).toLowerCase());
+			}
+			train.setRoute(stations);
+			service.addtrain(train);
+			result="Train details added successfully";
+		}
+		return result;
+	}
+	
+	
+	
+	@PostMapping(value="/Admininfo")
+	public String AdminInfo() {
+		int noofseats=2;
+		Admininfo admin=new Admininfo();
+		admin.setCount(1);
+		admin.setNoofseats(noofseats);
+		ArrayList<String> preferences=new ArrayList<>();
+		preferences.add("lower");
+		preferences.add("middle");
+		preferences.add("upper");
+		preferences.add("lower");
+		preferences.add("middle");
+		preferences.add("upper");
+		preferences.add("sidelower");
+		preferences.add("sideupper");
+		ArrayList<String> preferences1=new ArrayList<>();
+		
+	
+			for(int i=0;i<2;i++) {
+				for(int j=0;j<preferences.size();j++) {
+					preferences1.add(preferences.get(j));
+				}
+			}
+		admin.setSleeper(preferences1);
+		admin.setThirdtier(preferences1);
+		ArrayList<String> preferences3=new ArrayList<>();
+		preferences3.add("lower");
+		preferences3.add("upper");
+		preferences3.add("sidelower");
+		preferences3.add("sideupper");
+		ArrayList<String> preferences2=new ArrayList<>();
+			for(int i=0;i<2;i++) {
+				for(int j=0;j<preferences3.size();j++) {
+					preferences2.add(preferences3.get(j));
+				}
+			}
+		admin.setSecondtier(preferences2);
+		adminservice.addinfo(admin);
+		return "details added successfully";
+	}
+	
+	public boolean Checkbytrainname(String train_name) {
+		Optional<Trainhistory> train;
+		train=service.getbytrainname(train_name);
+		if(train.isEmpty()) {
+			return false;
+		}else {
+			return true;
+		}
+	}
+	
+	
+	@GetMapping(value="/trainupdate/{train_number}")
+	public String Gettrainbynumber(@PathVariable (value="train_number" ) Long train_number) {
+		String result="Train details imported successfully";
+		Trainhistory temptrain=new Trainhistory();
+		if(service.getbytrainnumber(train_number).isPresent()) {
+			temptrain=service.getbytrainnumber(train_number).get();
+			DemoDetails demo=new DemoDetails();
+			demo.setCount(1);
+			demo.setTrain(temptrain);
+			demoservice.adddemo(demo);
+		}else {
+			result="train number is invalid/train does'nt exists";
+		}
+		return result;
+	}
+	
+	
+	
+	
+	@PutMapping(value="/addstation/{date}/{addafter}/{station_name}")
+	public String Addstation(@PathVariable(value="date")String date,@PathVariable(value="addafter")String addafter,@PathVariable(value="station_name")String station_name) {
+		String result=null;
+		DemoDetails demo=new DemoDetails();
+		demo=demoservice.getdemo();
+		if(date!=null && addafter!=null && station_name!=null && demo!=null ) {
+			try {
+				Addstationbydate(date,addafter.toLowerCase(),station_name.toLowerCase());
+			}catch(TrainException e) {
+				result=e.getMessage();
+			}
+		}else {
+			result="Enter valid details / train details not imported";
+		}
+		if(result==null) {
+			result="station added successfully";
+		}
+		return result;
+	}
+	
+	@PutMapping(value="/deletestation/{date}/{station_name}")
+	public String Deletestation(@PathVariable(value="date")String date,@PathVariable(value="station_name")String station_name){
+		String result=null;
+		DemoDetails demo=new DemoDetails();
+		demo=demoservice.getdemo();
+		if(date!=null && station_name!=null && demo!=null) {
+			try {
+				Deletestationbydate(date,station_name.toLowerCase());
+			}catch(TrainException e) {
+				result=e.getMessage();
+			}
+		}else {
+			result="enter valid details / train details not imported";
+		}if(result==null) {
+			result="station deleted successfully";
+		}
+		return result;
+	}
+	
+	@PutMapping(value="/addcoach/{date}/{coach_name}")
+	public String Addcoach(@PathVariable(value="date")String date,@PathVariable(value="coach_name")String coach_name) {
+		String result=null;
+		DemoDetails demo=new DemoDetails();
+		demo=demoservice.getdemo();
+		if( date!=null && coach_name!=null && demo!=null && demo.getTrain()!=null) {
+			if(coach_name.length()==1 && (coach_name.equals("S") || coach_name.equals("B") || coach_name.equals("A"))) {
+				try {
+					Addcoachbydate(date,coach_name);
+				}catch(TrainException e) {
+					result=e.getMessage();
+				}
+			}else {
+				result="coach name in the format S or B or A";
+			}
+		}else {
+			result="enter valid details / train details not imported";
+		}
+		if(result==null) {
+			result="coach added successfully";
+		}
+		return result;
+	}
+	
+	@PutMapping(value="/deletecoach/{date}/{coach_name}")
+	public String Deletecoach(@PathVariable(value="date")String date,@PathVariable(value="coach_name")String coach_name) {
+		String result=null;
+		DemoDetails demo=new DemoDetails();
+		demo=demoservice.getdemo();
+		if( date!=null && coach_name!=null && demo!=null) {
+			//String[] s=coach_name.split("-");
+			if(coach_name.length()==1 && (coach_name.equals("S") || coach_name.equals("B") || coach_name.equals("A"))) {
+				result=Deletecoachbydate(date,coach_name);
+			}else {
+				result="coach name in the format S or B or A";
+			}
+		}else {
+			result="enter valid details / train details not imported";
+		}
+		if(result==null) {
+			result="coach deleted successfully";
+		}
+		return result;
+	}
+	
+	@PutMapping(value="/bookingstatus/{date}/{booking_status}")
+	public String Updatebooking_status(@PathVariable(value="date")String date,@PathVariable(value="booking_status")String booking_status) {
+		String result=null;
+		DemoDetails demo=new DemoDetails();
+		demo=demoservice.getdemo();
+		if(date!=null && booking_status!=null && demo!=null) {
+			if(booking_status.equals("opened") || booking_status.equals("closed")) {
+				try {
+					Updatebookingsbydate(date,booking_status);
+				}catch(TrainException e) {
+					result=e.getMessage();
+				}
+			}else {
+				result="booking status should be either opened or closed";
+			}
+		}else {
+			result="enter valid details / train details not imported";
+		}
+		if(result==null) {
+			result="bookingstatus updated successfully";
+		}
+		return result;
+	}
+	
+	@PutMapping(value="/journeystatus/{date}/{journey_status}")
+	public String Updatejourney_status(@PathVariable(value="date")String date,@PathVariable(value="journey_status")String journey_status) {
+		String result=null;
+		DemoDetails demo=new DemoDetails();
+		demo=demoservice.getdemo();
+		if(date!=null && journey_status!=null && demo!=null) {
+			if(journey_status.equals("started") || journey_status.equals("ended")) {
+				try {
+					Updatejourneysbydate(date,journey_status);
+				}catch(TrainException e) {
+					result=e.getMessage();
+				}
+			}else {
+				result="booking status should be either started or ended";
+			}
+		}else {
+			result="enter valid details / train details not imported";
+		}
+		if(result==null) {
+			result="journey status updated successfully";
+		}
+		return result;
+	}
+	
+	
+	private void Updatejourneysbydate(String date, String journey_status) throws TrainException {
+		Trainhistory train=new Trainhistory();
+		if(demoservice.getdemo()!=null) {
+			train=demoservice.getdemo().getTrain();
+		if(train!=null) {
+			ArrayList<Bookinghistory> bookings=new ArrayList<>();
+			bookings=train.getBookinghistory();
+			Bookinghistory b=new Bookinghistory();
+			if(bookings!=null) {
+				if(!bookings.isEmpty()) {
+					int bookingsindex=-7;
+					for(int i=0;i<bookings.size();i++) {
+						if(date.equals(bookings.get(i).getDate())) {
+							b=bookings.get(i);
+							bookingsindex=i;
+						}
+					}
+					if(bookingsindex!=-7) {
+						if(checkbookingspresent(b)!=null) {
+							if(b.getBooking_status().equals("closed") || b.getBooking_status().equals("chart prepared") || b.getBooking_status().equals("train departed")) {
+								if(journey_status.equals("started") ) {
+									if( b.getJourney_status().equals("progress")) {
+										b.setJourney_status(journey_status);
+										b.setBooking_status("train departed");
+										bookings.set(bookingsindex, b);
+									}else {
+										throw new TrainException("journey started already");
+								}}else {
+									if(journey_status.equals("ended") && b.getJourney_status().equals("started")) {
+										EnquiryInfo enquiryInfo=new EnquiryInfo();
+										PassengersInfo p=new PassengersInfo();
+										p.setTrain_no(train.getTrain_no());
+										p.setBookinghistory(b);
+										HashMap<String,PassengersInfo> hash=new HashMap<>();
+										if(pnrservice.getPNRhistory()!=null && !pnrservice.getPNRhistory().isEmpty() && pnrservice.getPNRhistory().size()!=0){
+											hash=pnrservice.gethashenquiry();
+										}
+										hash.put(b.getDate(),p);
+										enquiryInfo.setHash(hash);
+										pnrservice.updateenquiry(enquiryInfo);
+										bookingcontroller.Journeydendedupdation(b);
+										bookings.remove(bookingsindex);
+									}else {
+										throw new TrainException("journey not started yet");
+									}
+								}
+								train.setBookinghistory(bookings);
+								service.updatetrain(train);
+								DemoDetails d=new DemoDetails();
+								d.setTrain(train);
+								demoservice.updatedemotrain(d);
+							}else {
+								throw new TrainException("either booking status is opened or else journey started already");
+							}
+						}else {
+							throw new TrainException("no passengers found on that date hence journey cannot be updated");
+						}
+					}else {
+						throw new TrainException("no coaches added for that date or else date is invalid");
+					}
+				}else {
+					throw new TrainException("no coaches added for any date ");
+				}
+				}else {
+					throw new TrainException("no coaches added for any date ");
+				}
+			}else {
+				throw new TrainException("train details not imported");
+				}
+		}
+		
+	}
+	@PostMapping(value="/temp1")
+	public void demopnr(){
+		pnrservice.firstenquiry();
+	}
+
+	@PostMapping(value = "temp2")
+	public void demopnranduser(){
+		pnrservice.firstpnranduser();
+	}
+	private void Updatebookingsbydate( String date, String booking_status) throws TrainException{
+		Trainhistory train=new Trainhistory();
+		if(demoservice.getdemo()!=null) {
+			train=demoservice.getdemo().getTrain();
+		if(train!=null) {
+			ArrayList<Bookinghistory> bookings=new ArrayList<>();
+			bookings=train.getBookinghistory();
+			Bookinghistory b=new Bookinghistory();
+			if(bookings!=null) {
+				if(!bookings.isEmpty()) {
+					int bookingsindex=-7;
+					for(int i=0;i<bookings.size();i++) {
+						if(date.equals(bookings.get(i).getDate())) {
+							b=bookings.get(i);
+							bookingsindex=i;
+						}
+					}
+					if(bookingsindex!=-7) {
+						if(b.getJourney_status().equals("progress")) {
+							b.setBooking_status(booking_status);
+							bookings.set(bookingsindex, b);
+							train.setBookinghistory(bookings);
+							service.updatetrain(train);
+							DemoDetails d=new DemoDetails();
+							d.setTrain(train);
+							demoservice.updatedemotrain(d);
+						}else {
+							throw new TrainException("journey started on that date already booking status cannot be updated");
+						}
+					}else {
+						throw new TrainException("no coaches added for that date or else date is invalid");
+					}
+		}else {
+			throw new TrainException("no coaches added for any date ");
+		}
+		}else {
+			throw new TrainException("no coaches added for any date ");
+		}
+		}else {
+			throw new TrainException("train details not imported");
+		}
+		}
+	}
+	private String Deletecoachbydate( String date, String coach_name) {
+		String result=null;
+		try {
+			Trainhistory train=new Trainhistory();
+			if(demoservice.getdemo()!=null) {
+				train=demoservice.getdemo().getTrain();
+			if(train!=null) {
+			ArrayList<Bookinghistory> bookings=new ArrayList<>();
+			bookings=train.getBookinghistory();
+			Bookinghistory b=new Bookinghistory();
+			if(bookings!=null) {
+				if(!bookings.isEmpty()) {
+					int bookingsindex=-8;
+					if(bookings!=null && !bookings.isEmpty() ) {
+					for(int i=0;i<bookings.size();i++) {
+						if(date.equals(bookings.get(i).getDate())) {
+							b=bookings.get(i);
+							bookingsindex=i;
+						}
+					}if(bookingsindex!=-8 && b.getJourney_status().equals("progress")) {
+						ArrayList<String> temp1=new ArrayList<>();
+						ArrayList<String> temp2=new ArrayList<>();
+						ArrayList<String> temp3=new ArrayList<>();
+						ArrayList<Coachposition> coachpositions=new ArrayList<>();
+						Coachdetails coachdetails =new Coachdetails();
+						Bookingdetails bookingdetails=new Bookingdetails();
+						if(b.getSleepercoaches()!=null && !b.getSleepercoaches().isEmpty()) {
+							temp1=b.getSleepercoaches();
+						}if(b.getThirdtiercoaches()!=null && !b.getThirdtiercoaches().isEmpty()) {
+							temp2=b.getThirdtiercoaches();
+						}if(b.getSecondtiercoaches()!=null && !b.getSecondtiercoaches().isEmpty()) {
+							temp3=b.getSecondtiercoaches();
+						}
+						if(coach_name.equals("S")) {
+								bookingdetails=b.getBookingdetails();
+								coachdetails=bookingdetails.getSleeper();
+								int coachpositionindex=-5;
+								if(coachdetails!=null) {
+								if(coachdetails.getCoachtypes()!=null ) {
+									if(!coachdetails.getCoachtypes().isEmpty()) {
+									coachpositions=coachdetails.getCoachtypes();
+									coachpositionindex=coachpositions.size()-1;
+									if(checkbookingspresentinthatcoach(coachpositions.get(coachpositionindex).getSeatdetails())) {
+										if(b.getJourney_status().equals("progress") && (b.getBooking_status().equals("closed")||b.getBooking_status().equals("progress"))) {
+											coachpositions.remove(coachpositionindex);
+											coachdetails.setCoachdetails(coachpositions);
+											bookingdetails.setSleeper(coachdetails);
+											if(b.getSleepercoaches().size()!=0) {
+												temp1=b.getSleepercoaches();
+												temp1.remove(temp1.size()-1);
+											}
+												b.setBookingdetails(bookingdetails);
+												b.setSleepercoaches(temp1);
+										}else {
+											throw new TrainException("either journey started already or else bookings should be closed");
+										}
+									}else {
+										throw new TrainException(checkbookingspresent(b)+"  bookings happened on that coach hence that coach cannot be removed");
+									}
+									}else {
+										throw new TrainException("coach type does'nt exists");
+									}
+								}else {
+									throw new TrainException("1.coach name does'nt exists");
+								}
+								}else {
+									throw new TrainException("coach name does'nt exists");
+								}
+						}else if(coach_name.equals("B") ) {
+								bookingdetails=b.getBookingdetails();
+								coachdetails=bookingdetails.getThirdtier();
+								int coachpositionindex=-5;
+								if(coachdetails!=null) {
+								if(coachdetails.getCoachtypes()!=null ) {
+									if(!coachdetails.getCoachtypes().isEmpty()) {
+									coachpositions=coachdetails.getCoachtypes();
+									coachpositionindex=coachpositions.size()-1;
+									if(checkbookingspresentinthatcoach(coachpositions.get(coachpositionindex).getSeatdetails())) {
+										if(b.getJourney_status().equals("progress") && (b.getBooking_status().equals("closed")||b.getBooking_status().equals("progress"))) {
+										coachpositions.remove(coachpositionindex);
+										coachdetails.setCoachdetails(coachpositions);
+										bookingdetails.setThirdtier(coachdetails);
+										temp2=b.getThirdtiercoaches();
+										temp2.remove(temp2.size()-1);
+										b.setBookingdetails(bookingdetails);
+										b.setThirdtiercoaches(temp2);
+										}else {
+											throw new TrainException("either journey started already or else bookings should be closed");
+										}
+									}else {
+										throw new TrainException(checkbookingspresent(b)+" bookings happened on that coach hence that coach cannot be removed");
+									}
+								}else {
+									throw new TrainException("1.coach name does'nt exists");
+								}
+								}else {
+									throw new TrainException("coach type does'nt exists");
+								}
+								}else {
+									throw new TrainException("coach name does'nt exists");
+								}
+						}else if(coach_name.equals("A")) {
+								bookingdetails=b.getBookingdetails();
+								coachdetails=bookingdetails.getSecondtier();
+								int coachpositionindex=-5;
+								if(coachdetails!=null) {
+								if(coachdetails.getCoachtypes()!=null ) {
+									if(!coachdetails.getCoachtypes().isEmpty()) {
+									coachpositions=coachdetails.getCoachtypes();
+									coachpositionindex=coachpositions.size()-1;
+									if(checkbookingspresentinthatcoach(coachpositions.get(coachpositionindex).getSeatdetails())) {
+										if(b.getJourney_status().equals("progress") && (b.getBooking_status().equals("closed")||b.getBooking_status().equals("progress"))) {
+										coachpositions.remove(coachpositionindex);
+										coachdetails.setCoachdetails(coachpositions);
+										bookingdetails.setSecondtier(coachdetails);
+										temp3=b.getSecondtiercoaches();
+										temp3.remove(temp3.size()-1);
+										b.setBookingdetails(bookingdetails);
+										b.setSecondtiercoaches(temp3);
+										}else {
+											throw new TrainException("either journey started already or else bookings should be closed");
+										}
+									}else {
+										throw new TrainException("bookings happened on that coach hence that coach cannot be removed");
+									}
+								}else {
+									throw new TrainException("1.coach name does'nt exists");
+								}
+						}else {
+							throw new TrainException("coach type does'nt exists");
+						}
+						}else {
+							throw new TrainException("coach type does'nt exists");
+						}
+						}
+				ArrayList<String> Allcoaches=new ArrayList<>();
+				Allcoaches=Addallcoaches(temp1,temp2,temp3);
+				b.setAllcoaches(Allcoaches);
+				if(Allcoaches==null || Allcoaches.isEmpty()) {
+					b.setBooking_status("closed");
+				}
+				bookings.set(bookingsindex, b);
+				train.setBookinghistory(bookings);
+				service.updatetrain(train);
+				DemoDetails d=new DemoDetails();
+				d.setTrain(train);
+				demoservice.updatedemotrain(d);
+			}else {
+				throw new TrainException("no coaches found on that date or else journey started for that date hence coaches cannot be removed");
+			}
+			}else {
+				throw new TrainException("no coaches aded for any date ");
+			}
+			}else {
+				throw new TrainException("no coaches added for any date / train not exists");
+			}}else {
+				throw new TrainException("no coaches aded for any date ");
+			}
+		}else {
+			throw new TrainException("train details not imported");
+		}
+			}}catch(TrainException e) {
+			result=e.getMessage();
+		}
+		return result;
+	}
+	
