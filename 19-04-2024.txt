@@ -1,0 +1,185 @@
+private void Addcoachbydate(String date, String coach_name) throws TrainException{
+		Trainhistory train=new Trainhistory();
+		if(demoservice.getdemo()!=null) {
+			train=demoservice.getdemo().getTrain();
+		int index=0;
+		if(train!=null) {
+			if(  train.getBookinghistory()==null || train.getBookinghistory().isEmpty() ) {
+				whatiffirstbooking(train,date,coach_name,index,train.getBookinghistory());
+			}else {
+				ArrayList<Bookinghistory> bookings=new ArrayList<>();
+				Bookinghistory b=new Bookinghistory();
+				bookings=train.getBookinghistory();
+				if(bookings!=null) {
+					if(!bookings.isEmpty()) {
+						int bookingsindex=-8;
+						for(int i=0;i<bookings.size();i++) {
+							if(date.equals(bookings.get(i).getDate())) {
+								bookingsindex=i;
+								b=bookings.get(i);
+							}
+						}
+						if(bookingsindex!=-8) {
+							if(!b.getBooking_status().equals("opened") && !b.getJourney_status().equals("started")) {
+								whatifdatepresent(train,bookings,b,bookingsindex,coach_name,date);
+							}else {
+								throw new TrainException("bookings should be closed while adding a coach or else journey has started");	
+							}
+						}else {
+							index=1;
+							whatiffirstbooking(train,date,coach_name,index,train.getBookinghistory());
+						}
+					}else {
+						throw new TrainException("Train details not imported");	
+				}}else {
+					throw new TrainException("Train details not imported");
+				}
+			}
+		}else {
+			throw new TrainException("Train details not imported");
+		}
+		}
+	}
+	
+	private void whatifdatepresent(Trainhistory train,ArrayList<Bookinghistory> bookings,Bookinghistory b,int bookingsindex,String coach_name,String date) {
+		ArrayList<String> temp1=new ArrayList<>();
+		ArrayList<String> temp2=new ArrayList<>();
+		ArrayList<String> temp3=new ArrayList<>();
+	
+		ArrayList<Coachposition> coachpositions=new ArrayList<>();
+		Coachposition coachposition =new Coachposition();
+		Coachdetails coachdetails =new Coachdetails();
+		Bookingdetails bookingdetails=new Bookingdetails();
+		if(b.getSleepercoaches()!=null && !b.getSleepercoaches().isEmpty()) {
+			temp1=b.getSleepercoaches();
+		}if(b.getThirdtiercoaches()!=null && !b.getThirdtiercoaches().isEmpty()) {
+			temp2=b.getThirdtiercoaches();
+		}if(b.getSecondtiercoaches()!=null && !b.getSecondtiercoaches().isEmpty()) {
+			temp3=b.getSecondtiercoaches();
+		}
+		String coach_index="";
+		ArrayList<ArrayList<String>> twait=new ArrayList<>();
+		if(coach_name.equals("S")) {
+			bookingdetails=b.getBookingdetails();
+			ArrayList<ArrayList<String>> seatdetails=new ArrayList<>();
+			for(int i=0;i<adminservice.getinfo().getSleeper().size();i++) {
+				ArrayList<String> preferences=new ArrayList<>();
+				preferences.add("null");
+				seatdetails.add(preferences);
+			}
+			
+			if(bookingdetails.getSleeper()!=null) {
+				coachdetails=bookingdetails.getSleeper();
+				coachpositions=coachdetails.getCoachtypes();
+				temp1=b.getSleepercoaches();
+				temp1.add(coach_name+"-"+Integer.toString(coachpositions.size()+1));
+				coachposition.setCoach_name(coach_name+"-"+Integer.toString(coachpositions.size()+1));
+				coachposition.setSeatdetails(seatdetails);
+				coachpositions.add(coachposition);
+				coachdetails.setCoachdetails(coachpositions);
+				coachdetails.setPreferenceposition(adminservice.getinfo().getSleeper());
+				coachdetails.setAmount(b.getAvg_cost()+10);
+				bookingdetails.setSleeper(coachdetails);
+				b.setBookingdetails(bookingdetails);
+				b.setSleepercoaches(temp1);
+				coach_index="S";
+				twait=coachdetails.getWaitinglists();
+			}else {
+				coachposition.setSeatdetails(seatdetails);
+				coachposition.setCoach_name(coach_name+"-1");
+				coachpositions.add(coachposition);
+				coachdetails.setCoachdetails(coachpositions);
+				coachdetails.setPreferenceposition(adminservice.getinfo().getSleeper());
+				coachdetails.setAmount(b.getAvg_cost()+10);
+				bookingdetails.setSleeper(coachdetails);
+				temp1.add(coach_name+"-1");
+				b.setBookingdetails(bookingdetails);
+				b.setSleepercoaches(temp1);
+			}
+		}else if(coach_name.equals("B")) {
+			bookingdetails=b.getBookingdetails();
+			ArrayList<ArrayList<String>> seatdetails=new ArrayList<>();
+			for(int i=0;i<adminservice.getinfo().getThirdtier().size();i++) {
+				ArrayList<String> preferences=new ArrayList<>();
+				preferences.add("null");
+				seatdetails.add(preferences);
+			}
+			
+			if(bookingdetails.getThirdtier()!=null ) {
+				coachdetails=bookingdetails.getThirdtier();
+				coachpositions=coachdetails.getCoachtypes();
+				temp2=b.getThirdtiercoaches();
+				temp2.add(coach_name+"-"+Integer.toString(coachpositions.size()+1));
+				coachposition.setCoach_name(coach_name+"-"+Integer.toString(coachpositions.size()+1));
+				coachposition.setSeatdetails(seatdetails);
+				coachpositions.add(coachposition);
+				coachdetails.setCoachdetails(coachpositions);
+				coachdetails.setPreferenceposition(adminservice.getinfo().getThirdtier());
+				coachdetails.setAmount(b.getAvg_cost()+20);
+				bookingdetails.setThirdtier(coachdetails);
+				b.setBookingdetails(bookingdetails);
+				b.setThirdtiercoaches(temp2);
+				coach_index="B";
+				twait=coachdetails.getWaitinglists();
+			}else {
+				coachposition.setSeatdetails(seatdetails);
+				coachposition.setCoach_name(coach_name+"-1");
+				coachpositions.add(coachposition);
+				coachdetails.setCoachdetails(coachpositions);
+				coachdetails.setPreferenceposition(adminservice.getinfo().getThirdtier());
+				coachdetails.setAmount(b.getAvg_cost()+20);
+				bookingdetails.setThirdtier(coachdetails);
+				temp2.add(coach_name+"-1");
+				b.setBookingdetails(bookingdetails);
+				b.setThirdtiercoaches(temp2);
+			}
+			
+		}else if(coach_name.equals("A")) {
+			bookingdetails=b.getBookingdetails();
+			ArrayList<ArrayList<String>> seatdetails=new ArrayList<>();
+			for(int i=0;i<adminservice.getinfo().getSecondtier().size();i++) {
+				ArrayList<String> preferences=new ArrayList<>();
+				preferences.add("null");
+				seatdetails.add(preferences);
+			}
+			
+			if(bookingdetails.getSecondtier()!=null) {
+				coachdetails=bookingdetails.getSecondtier();
+				coachpositions=coachdetails.getCoachtypes();
+				temp3=b.getSecondtiercoaches();
+				temp3.add(coach_name+"-"+Integer.toString(coachpositions.size()+1));
+				coachposition.setCoach_name(coach_name+"-"+Integer.toString(coachpositions.size()+1));
+				coachposition.setSeatdetails(seatdetails);
+				coachpositions.add(coachposition);
+				coachdetails.setCoachdetails(coachpositions);
+				coachdetails.setPreferenceposition(adminservice.getinfo().getSecondtier());
+				coachdetails.setAmount(b.getAvg_cost()+30);
+				bookingdetails.setSecondtier(coachdetails);
+				b.setBookingdetails(bookingdetails);
+				b.setSecondtiercoaches(temp3);
+				coach_index="A";
+				twait=coachdetails.getWaitinglists();
+			}else {
+				coachposition.setSeatdetails(seatdetails);
+				coachposition.setCoach_name(coach_name+"-1");
+				coachpositions.add(coachposition);
+				coachdetails.setCoachdetails(coachpositions);
+				coachdetails.setPreferenceposition(adminservice.getinfo().getSecondtier());
+				coachdetails.setAmount(b.getAvg_cost()+30);
+				bookingdetails.setSecondtier(coachdetails);
+				temp3.add(coach_name+"-1");
+				b.setBookingdetails(bookingdetails);
+				b.setSecondtiercoaches(temp3);
+			}
+		}
+		b.setAllcoaches(Addallcoaches(temp1,temp2,temp3));
+		bookings.set(bookingsindex, b);
+		train.setBookinghistory(bookings);
+		service.updatetrain(train);
+		DemoDetails d=new DemoDetails();
+		d.setTrain(train);
+		demoservice.updatedemotrain(d);
+		if(coach_index!="" && twait!=null && !twait.isEmpty() && twait.size()!=0) {
+			bookingcontroller.checkwaitingbyaddcoach(coachdetails,coach_index,train.getTrain_no(),date);
+		}
+	}
