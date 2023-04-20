@@ -1,0 +1,212 @@
+private void whatiffirstbooking(Trainhistory train,String date,String coach_name,int index, ArrayList<Bookinghistory> bookings) {
+		ArrayList<String> temp1=new ArrayList<>();
+		ArrayList<String> temp2=new ArrayList<>();
+		ArrayList<String> temp3=new ArrayList<>();
+		Bookinghistory b=new Bookinghistory();
+		b.setDate(date);
+		b.setBooking_status("progress");
+		b.setJourney_status("progress");
+		b.setFrom(train.getFrom());
+		b.setTo(train.getTo());
+		b.setRoute(train.getRoute());
+		b.setNoofstations(train.getRoute().size());
+		b.setAvg_cost(train.getAvg_cost());
+		Bookingdetails bookingdetails=new Bookingdetails();
+		if(coach_name.equals("S")) {
+			ArrayList<Coachposition> coachpositions=new ArrayList<>();
+			Coachposition coachposition =new Coachposition();
+			coachposition.setCoach_name(coach_name+"-1");
+			ArrayList<ArrayList<String>> seatdetails=new ArrayList<>();
+			
+			for(int i=0;i<adminservice.getinfo().getSleeper().size();i++) {
+				ArrayList<String> preferences=new ArrayList<>();
+				preferences.add("null");
+				seatdetails.add(preferences);
+			}
+			
+			coachposition.setSeatdetails(seatdetails);
+			coachpositions.add(coachposition);
+			Coachdetails coachdetails =new Coachdetails();
+			coachdetails.setCoachdetails(coachpositions);
+			temp1.add(coach_name+"-1");
+			b.setSleepercoaches(temp1);
+			coachdetails.setPreferenceposition(adminservice.getinfo().getSleeper());
+			coachdetails.setAmount(b.getAvg_cost()+10);
+			bookingdetails.setSleeper(coachdetails);
+			b.setBookingdetails(bookingdetails);
+		}else if(coach_name.equals("B")) {
+			ArrayList<Coachposition> coachpositions=new ArrayList<>();
+			Coachposition coachposition =new Coachposition();
+			coachposition.setCoach_name(coach_name+"-1");
+			ArrayList<ArrayList<String>> seatdetails=new ArrayList<>();
+			for(int i=0;i<adminservice.getinfo().getThirdtier().size();i++) {
+				ArrayList<String> preferences=new ArrayList<>();
+				preferences.add("null");
+				seatdetails.add(preferences);
+			}
+			coachposition.setSeatdetails(seatdetails);
+			coachpositions.add(coachposition);
+			Coachdetails coachdetails =new Coachdetails();
+			coachdetails.setCoachdetails(coachpositions);
+			temp2.add(coach_name+"-1");
+			b.setThirdtiercoaches(temp2);
+			coachdetails.setPreferenceposition(adminservice.getinfo().getThirdtier());
+			coachdetails.setAmount(b.getAvg_cost()+20);
+			bookingdetails.setThirdtier(coachdetails);
+			b.setBookingdetails(bookingdetails);
+		}else if(coach_name.equals("A")) {
+			ArrayList<Coachposition> coachpositions=new ArrayList<>();
+			Coachposition coachposition =new Coachposition();
+			coachposition.setCoach_name(coach_name+"-1");
+			ArrayList<ArrayList<String>> seatdetails=new ArrayList<>();
+			for(int i=0;i<adminservice.getinfo().getSecondtier().size();i++) {
+				ArrayList<String> preferences=new ArrayList<>();
+				preferences.add("null");
+				seatdetails.add(preferences);
+			}
+			coachposition.setSeatdetails(seatdetails);
+			coachpositions.add(coachposition);
+			Coachdetails coachdetails =new Coachdetails();
+			coachdetails.setCoachdetails(coachpositions);
+			temp3.add(coach_name+"-1");
+			b.setSecondtiercoaches(temp3);
+			coachdetails.setPreferenceposition(adminservice.getinfo().getSecondtier());
+			coachdetails.setAmount(b.getAvg_cost()+30);
+			bookingdetails.setSecondtier(coachdetails);
+			b.setBookingdetails(bookingdetails);
+		}
+		b.setAllcoaches(Addallcoaches(temp1,temp2,temp3));
+		if(index==1) {
+			bookings.add(b);
+			train.setBookinghistory(bookings);
+		}else {
+			ArrayList<Bookinghistory> firstbookings=new ArrayList<>();
+			firstbookings.add(b);
+			train.setBookinghistory(firstbookings);
+		}
+		service.updatetrain(train);
+		DemoDetails d=new DemoDetails();
+		d.setTrain(train);
+		demoservice.updatedemotrain(d);
+	}
+	private void Deletestationbydate(String date, String station_name) throws TrainException {
+		Trainhistory train=new Trainhistory();
+		if(demoservice.getdemo()!=null) {
+			train=demoservice.getdemo().getTrain();
+		if(train!=null ) {
+			ArrayList<Bookinghistory> bookings=new ArrayList<>();
+			Bookinghistory b=new Bookinghistory();
+			bookings=train.getBookinghistory();
+			if(bookings!=null) {
+				if(!bookings.isEmpty()) {
+			int bookingarrayindex=-9;
+			for(int i=0;i<bookings.size();i++) {
+				if(date.equals(bookings.get(i).getDate())) {
+					b=bookings.get(i);
+					bookingarrayindex=i;
+					break;
+				}
+			}
+			if(b!=null &&   bookingarrayindex!=-9) {
+				if( b.getJourney_status().equals("progress") && checkbookingspresent(b)==null) {
+					ArrayList<String> routes=new ArrayList<>();
+					routes=b.getRoute();
+					if(routes.contains(station_name) ) {
+							routes.remove(station_name);
+							b.setRoute(routes);
+							b.setNoofstations(routes.size());
+							b.setFrom(routes.get(0));
+							b.setTo(routes.get(routes.size()-1));
+							bookings.set(bookingarrayindex, b);
+							train.setBookinghistory(bookings);
+							service.updatetrain(train);
+							DemoDetails d=new DemoDetails();
+							d.setTrain(train);
+							demoservice.updatedemotrain(d);
+					}else {
+						throw new TrainException("either station name is invalid oe else bookings happened on this date hence stations cannot be updated");
+					}
+				}else {
+					throw new TrainException("either journey started already or else bookings happened on this date");
+				}
+			}else {
+				throw new TrainException("no coaches added for that date ");
+			}
+		}else {
+			throw new TrainException("no coaches added for any date ");
+		}}else {
+			throw new TrainException("no coaches added for any date ");
+		}
+		}else {
+			throw new TrainException("train details not imported");
+		}
+		}
+	}
+	private void Addstationbydate(String date, String addafter, String station_name)throws TrainException {
+		Trainhistory train=new Trainhistory();
+		if(demoservice.getdemo()!=null) {
+			train=demoservice.getdemo().getTrain();
+		if( train!=null ) {
+			ArrayList<Bookinghistory> bookings=new ArrayList<>();
+			Bookinghistory b=new Bookinghistory();
+			bookings=train.getBookinghistory();
+			if(bookings!=null) {
+				if(!bookings.isEmpty()) {
+			int bookingarrayindex=-9;
+			for(int i=0;i<bookings.size();i++) {
+				if(date.equals(bookings.get(i).getDate())) {
+					b=bookings.get(i);
+					bookingarrayindex=i;
+					break;
+				}
+			}
+			if(b!=null && ((b.getSleepercoaches()!=null && !b.getSleepercoaches().isEmpty()) || (b.getSecondtiercoaches()!=null && 
+					!b.getSecondtiercoaches().isEmpty()) || (b.getThirdtiercoaches()!=null && !b.getThirdtiercoaches().isEmpty()))) {
+				if(b.getJourney_status().equals("progress")) {
+					ArrayList<String> routes=new ArrayList<>();
+					routes=b.getRoute();
+					int afterindex=-8;
+					if(routes.contains(addafter)) {
+						for(int i=0;i<routes.size();i++) {
+							if(addafter.equals(routes.get(i))) {
+								afterindex=i;
+								break;
+							}
+						}if(!routes.contains(station_name) && checkbookingspresent(b)==null ) {
+							routes.add(afterindex+1, station_name);
+							b.setRoute(routes);
+							b.setNoofstations(routes.size());
+							b.setFrom(routes.get(0));
+							b.setTo(routes.get(routes.size()-1));
+							bookings.set(bookingarrayindex, b);
+							train.setBookinghistory(bookings);
+							service.updatetrain(train);
+							DemoDetails d=new DemoDetails();
+							d.setTrain(train);
+							demoservice.updatedemotrain(d);
+						}else {
+							throw new TrainException(checkbookingspresent(b)+" either new station name is already present in the route or else bookings happened on that hence stations cannot be updated");
+						}
+					}else {
+						throw new TrainException("addafter station name is invalid");
+					}
+				}else {
+					throw new TrainException("Journey started hence stations cannot be updated");
+				}
+				}else{
+					throw new TrainException("train details not imported or no coaches added for anydate");
+				}
+		}else {
+			throw new TrainException("no coaches added for any date");
+		}
+		}else {
+			throw new TrainException("no coaches added for any date");
+		}
+		}else {
+			throw new TrainException("train details not imported");
+		}
+		}else {
+			throw new TrainException("no coaches added for any date");
+		}
+	
+	}
