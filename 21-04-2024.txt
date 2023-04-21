@@ -1,0 +1,113 @@
+private String checkbookingspresent(Bookinghistory b) {
+		String result=null;
+		ArrayList<Coachdetails> coachdetails=new ArrayList<>();
+		if(b.getBookingdetails()!=null) {
+		if(b.getBookingdetails().getSleeper()!=null) {
+			coachdetails.add(b.getBookingdetails().getSleeper());
+		}if(b.getBookingdetails().getThirdtier()!=null) {
+			coachdetails.add(b.getBookingdetails().getThirdtier());
+		}if(b.getBookingdetails().getSecondtier()!=null) {
+				coachdetails.add(b.getBookingdetails().getSecondtier());
+		}
+		for(int i=0;i<coachdetails.size();i++) {
+			if(coachdetails.get(i).getCoachtypes()!=null && !coachdetails.get(i).getCoachtypes().isEmpty()) {
+				if(coachdetails.get(i).getCoachtypes().get(0).getSeatdetails()!=null) {
+					if(!coachdetails.get(i).getCoachtypes().get(0).getSeatdetails().isEmpty()) {
+						ArrayList<ArrayList<String>> seatdetails=new ArrayList<>();
+						seatdetails=coachdetails.get(i).getCoachtypes().get(0).getSeatdetails();
+						for(int g=0;g<seatdetails.size();g++) {
+								if(!seatdetails.get(g).get(0).equals("null")) {
+									result="present";
+									break;
+								}
+						}
+					}
+				}
+			}
+		}
+		}
+		return result;
+	}
+	
+	private boolean checkbookingspresentinthatcoach(ArrayList<ArrayList<String>> seatdetails) {
+		boolean result=true;
+		for(int i=0;i<seatdetails.size();i++) {
+			if(!seatdetails.get(i).get(0).equals("null")) {
+				result=false;
+				break;
+			}
+		}
+		return result;
+	}
+	
+		private ArrayList<String> Addallcoaches(ArrayList<String> temp1,ArrayList<String> temp2,ArrayList<String> temp3){
+			ArrayList<String> allcoaches=new ArrayList<>();
+			if(temp1!=null) {
+				if(!temp1.isEmpty() && temp1.size()!=0) {
+					for(int i=0;i<temp1.size();i++) {
+						allcoaches.add(temp1.get(i));
+					}
+				}
+			}
+			if(temp2!=null) {
+				if(!temp2.isEmpty() && temp2.size()!=0) {
+					for(int i=0;i<temp2.size();i++) {
+						allcoaches.add(temp2.get(i));
+					}
+				}
+			}
+			if(temp3!=null) {
+				if(!temp3.isEmpty() && temp3.size()!=0) {
+					for(int i=0;i<temp3.size();i++) {
+						allcoaches.add(temp3.get(i));
+					}
+				}
+			}
+			return allcoaches;
+		}
+
+	@PutMapping(value="/updateamount/{date}/{amount}")
+	public String Updateamount(@PathVariable(value="date")String date,@PathVariable(value="amount")long amount) {
+		String result=null;
+		DemoDetails demo=new DemoDetails();
+		demo=demoservice.getdemo();
+		if(date!=null && amount!=0 && demo!=null && !demo.equals("")) {
+			result=updateamountbydate(date,amount,demo.getTrain());
+		}else {
+			result="enter valid details / train details not imported";
+		}
+		if(result==null) {
+			result="bookingstatus updated successfully";
+		}
+		return result;
+	}
+
+	private String updateamountbydate(String date, long amount, Trainhistory train) {
+		String result="nothing";
+		Trainhistory t=new Trainhistory();
+		t=train;
+		ArrayList<Bookinghistory> bookinghistories=new ArrayList<>();
+		bookinghistories=train.getBookinghistory();
+		Bookinghistory bookinghistory=new Bookinghistory();
+		int index=-8;
+		for(int i=0;i<train.getBookinghistory().size();i++){
+			if(date.equals(train.getBookinghistory().get(i).getDate())){
+				bookinghistory=train.getBookinghistory().get(i);
+				if(checkbookingspresent(train.getBookinghistory().get(i))==null){
+					bookinghistory.setAvg_cost(amount);
+					bookinghistories.set(i,bookinghistory);
+					t.setBookinghistory(bookinghistories);
+					service.updatetrain(t);
+					DemoDetails d=new DemoDetails();
+					d.setCount(1);
+					d.setTrain(t);
+					demoservice.updatedemotrain(d);
+					result="amount updated successfully";
+					break;
+				}else{
+					result="bookings happened hence amount cannot be updated";
+				}
+			}
+		}
+		return result;
+	}
