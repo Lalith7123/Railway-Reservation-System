@@ -1,0 +1,204 @@
+package com.h.demo.Service;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Optional;
+
+import com.h.demo.Repository.EnquiryRepository;
+import com.h.demo.Repository.PnruserkeyRepository;
+import com.h.demo.model.Bookinghistory;
+import com.h.demo.model.TempDetails.EnquiryInfo;
+import com.h.demo.model.TempDetails.PassengersInfo;
+import com.h.demo.model.TempDetails.PnrandUserkey;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.h.demo.Repository.PNRrepository;
+import com.h.demo.model.PNRhistory;
+import com.h.demo.model.PNRpackage;
+
+@Service
+public class PNRservice {
+
+	@Autowired
+	private PNRrepository repo;
+
+	@Autowired
+	private EnquiryRepository enquiryrepo;
+
+	@Autowired
+	private PnruserkeyRepository pnruserrepo;
+
+	public void firstenquiry(){
+		EnquiryInfo enquiryinfo=new EnquiryInfo();
+		enquiryinfo.setCount(1);
+		HashMap<String, PassengersInfo> hash=new HashMap<>();
+		PassengersInfo p=new PassengersInfo();
+		p.setTrain_no(123);
+		Bookinghistory b=new Bookinghistory();
+		b.setDate("90");
+		p.setBookinghistory(b);
+		hash.put("90",p);
+		enquiryinfo.setHash(hash);
+		enquiryrepo.save(enquiryinfo);
+	}
+
+	public void updateenquiry(EnquiryInfo enquiryInfo){
+		enquiryInfo.setCount(1);
+		enquiryrepo.save(enquiryInfo);
+	}
+	public HashMap<String,PassengersInfo> gethashenquiry(){
+		return enquiryrepo.findById((long)1).get().getHash();
+	}
+	public void firstPNR() {
+		PNRhistory pnr=new PNRhistory();
+		pnr.setCount(1);
+		ArrayList<PNRpackage> status=new ArrayList<>();
+		PNRpackage p=new PNRpackage();
+		p.setDate("90909");
+		status.add(p);
+		HashMap<Long,ArrayList<PNRpackage>> hash=new HashMap<>();
+		hash.put((long) 100100101, status);
+		pnr.setPnrhash(hash);
+		repo.save(pnr);
+	}
+	
+	public HashMap<Long,ArrayList<PNRpackage>> getPNRhistory(){
+		return repo.findById((long) 1).get().getPnrhash();
+	}
+	
+	public void updatePNR(PNRhistory pnr) {
+		Optional<PNRhistory> pnrinside=repo.findById((long) 1);
+		if(pnrinside.isPresent()) {
+			pnr.setCount(1);
+			repo.save(pnr);
+		}
+		/*Query q=new Query();
+		q.addCriteria(Criteria.where("_id").is(1));
+		PNRhistory tpnr=new PNRhistory();
+		tpnr=repo.findOne(q,PNRhistory.class);
+		tpnr.setPnrhash(pnr.getPnrhash());
+		repo.save(tpnr);*/
+	}
+
+	public void firstpnranduser(){
+		PnrandUserkey pnrandUserkey=new PnrandUserkey();
+		HashMap<Long,Long> hash=new HashMap<>();
+		hash.put(10L,10L);
+		pnrandUserkey.setCount(1);
+		pnrandUserkey.setHash(hash);
+		pnruserrepo.save(pnrandUserkey);
+	}
+	public HashMap<Long,Long> getpnranduser(){
+		return pnruserrepo.findById(1L).get().getHash();
+	}
+
+	public void updatepanranduserkey(long pnr,long userkey){
+		PnrandUserkey p=new PnrandUserkey();
+		p=pnruserrepo.findById(1L).get();
+		HashMap<Long,Long> hash=new HashMap<>();
+		hash=p.getHash();
+		hash.put(pnr,userkey);
+		p.setHash(hash);
+		p.setCount(1);
+		pnruserrepo.save(p);
+	}
+}
+
+
+package com.h.demo.Service;
+
+import com.h.demo.Repository.DemoKeyRepository;
+import com.h.demo.Repository.RegisterRepository;
+import com.h.demo.model.Registrations.UserRegister;
+import com.h.demo.model.TempDetails.DemoUserKey;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class UserService {
+    @Autowired
+    private RegisterRepository userrepo;
+
+    @Autowired
+    private DemoKeyRepository keyrepo;
+
+    public void adduser(UserRegister user) {
+        List<UserRegister> list=new ArrayList<>();
+        list=getallusers();
+        long key=0;
+        if(list!=null && !list.isEmpty() && list.size()!=0) {
+            key=list.get(list.size()-1).getSeperatekey();
+            key+=809;
+        }else {
+            key=10907;
+        }
+        user.setSeperatekey(key);
+        userrepo.save(user);
+    }
+
+
+    public UserRegister isuserpresentbyemail(String emailId) {
+        Optional<UserRegister> user=Optional.empty();
+        user=userrepo.findById(emailId);
+        UserRegister u=new UserRegister();
+
+        if(!user.isEmpty()) {
+            if(user.get()!=null) {
+                u = user.get();
+            }
+        }
+        return u;
+    }
+
+    public UserRegister isuserpresentbymobile(String mobile) {
+        Optional<UserRegister> user=Optional.empty();
+        user=userrepo.fingByMobile(mobile);
+        UserRegister u=new UserRegister();
+
+        if(!user.isEmpty()) {
+            if(user.get()!=null) {
+                u = user.get();
+            }
+        }
+        return u;
+    }
+
+    public List<UserRegister> getallusers(){
+        return userrepo.findAll();
+    }
+
+
+    public void updateuserkey(long key) {
+        DemoUserKey d=new DemoUserKey();
+        d.setKey(key);
+        d.setCount(1);
+        keyrepo.save(d);
+    }
+
+    public UserRegister getuserbykey() {
+        long key=0;
+        key=keyrepo.findById((long)1).get().getKey();
+        UserRegister user=new UserRegister();
+        if(userrepo.findBySeperatekey(key).isPresent()){
+            user=userrepo.findBySeperatekey(key).get();
+        }
+        return user;
+    }
+
+
+    public void updateuserdetails(UserRegister user) {
+        UserRegister ur=new UserRegister();
+        ur=userrepo.findBySeperatekey(user.getSeperatekey()).get();
+        ur=user;
+        userrepo.save(ur);
+    }
+
+    public UserRegister finduserbykey(long key){
+        return userrepo.findBySeperatekey(key).get();
+    }
+}
