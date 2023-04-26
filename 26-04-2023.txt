@@ -1,0 +1,106 @@
+package com.h.demo.Service;
+
+import java.util.List;
+
+import com.h.demo.model.TempDetails.Admininfo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.h.demo.Repository.AdminRepo;
+
+@Service
+public class AdminService {
+
+    @Autowired
+    private AdminRepo adrepo;
+
+    public void addinfo(Admininfo admin) {
+        adrepo.save(admin);
+    }
+
+    public Admininfo getinfo() {
+        List<Admininfo> admin=adrepo.findAll();
+        return admin.get(0);
+    }
+
+    public void updateadmininfo(Admininfo admininfo){
+        admininfo.setCount(1);
+        adrepo.save(admininfo);
+    }
+}
+
+package com.h.demo.Service;
+
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.h.demo.Repository.CoachRepository;
+import com.h.demo.model.TempDetails.DemoCoach;
+
+@Service
+public class CoachService {
+
+	@Autowired
+	private CoachRepository repo;
+	
+	public void Adddemocoach(DemoCoach coach) {
+		coach.setCount(1);
+		repo.save(coach);
+	}
+	
+	public void updatedemocoach(DemoCoach coach) {
+		Optional<DemoCoach> democoach=repo.findById((long) 1);
+		DemoCoach d=new DemoCoach();
+		if(!democoach.isEmpty()) {
+			d=democoach.get();
+			d=coach;
+			d.setCount(1);
+			repo.save(d);
+		}
+	}
+	
+	public DemoCoach getdemo() {
+		return repo.findById((long) 1).get();
+	}
+	
+	public void deletedemocoach() {
+		repo.deleteById((long) 1);
+	}
+}
+
+
+package com.h.demo.Service;
+
+import static org.springframework.data.mongodb.core.FindAndModifyOptions.options;
+import static org.springframework.data.mongodb.core.query.Criteria.where;
+import java.util.Objects;
+import static org.springframework.data.mongodb.core.query.Query.query;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.stereotype.Service;
+
+import com.h.demo.model.DatabaseSequence;
+
+@Service
+public class SequenceGeneratorService{
+@Autowired
+private MongoOperations mongoOperations;
+
+
+@Autowired
+public SequenceGeneratorService(MongoOperations mongoOperations) {
+	this.mongoOperations=mongoOperations;
+}
+ 
+
+public long generateSequence(String seqName) {
+    DatabaseSequence counter = mongoOperations.findAndModify(query(where("_id").is(seqName)),
+      new Update().inc("seq",103), options().returnNew(true).upsert(true),
+      DatabaseSequence.class);
+    return !Objects.isNull(counter) ? counter.getSeq() : 103;
+    
+}
+}
