@@ -1,0 +1,217 @@
+package com.h.demo.Service;
+
+import java.util.ArrayList;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.h.demo.Repository.DemoBookingRepo;
+import com.h.demo.Repository.DemoKeyRepository;
+import com.h.demo.Repository.DemoPNRrepository;
+import com.h.demo.Repository.DemodetailsRepository;
+import com.h.demo.Repository.WLRepository;
+import com.h.demo.model.TempDetails.DemoBookings;
+import com.h.demo.model.TempDetails.DemoDetails;
+import com.h.demo.model.TempDetails.DemoPNR;
+import com.h.demo.model.TempDetails.DemoUserKey;
+import com.h.demo.model.TempDetails.DemoWaitingList;
+
+@Service
+public class DemoService {
+
+	@Autowired
+	private DemodetailsRepository repo;
+
+	
+	
+	@Autowired
+	private DemoBookingRepo bookingsrepo;
+	
+	@Autowired
+	private DemoPNRrepository pnrrepo;
+	
+	@Autowired
+	private WLRepository wlrepo;
+	
+	
+	
+	public void adddemo(DemoDetails demo) {
+		repo.save(demo);
+	}
+
+	public DemoDetails getdemo() {
+		Optional<DemoDetails> d=repo.findById((long) 1);
+		DemoDetails returnd=new DemoDetails();
+		if(d.isPresent()) {
+			returnd=d.get();
+		}
+		return returnd;
+	}
+	
+	public void updatedemotrain(DemoDetails demo) {
+		Optional<DemoDetails> t=repo.findById((long) 1);
+		DemoDetails t1=new DemoDetails();
+		//Trainhistory demotrain=new Trainhistory();
+		if(t.isPresent()) {
+			t1=t.get();
+			t1=demo;
+			t1.setCount(1);
+			repo.save(t1);
+		}
+	}
+	
+	
+	/*public void updatetrain(Trainhistory train) {
+		Optional<Trainhistory> t=repo.findById(train.getTrain_name());
+		Trainhistory t1=new Trainhistory();
+		if(t.isPresent()) {
+			t1=t.get();
+			t1=train;
+			repo.save(t1);
+		}
+	}*/
+	
+	
+	
+	
+	public void addbookingsdemo(DemoBookings demobookings) {
+		demobookings.setCount(1);
+		bookingsrepo.save(demobookings);
+	}
+	
+	public DemoBookings getbookingsdemo() {
+		return bookingsrepo.findById((long)1).get();
+	}
+	
+	public void Updatedemobookings(DemoBookings demobookings) {
+		Optional<DemoBookings> demo=bookingsrepo.findById((long)1);
+		DemoBookings d1=new DemoBookings();
+		if(demo.isPresent()) {
+			d1=demo.get();
+			d1=demobookings;
+			bookingsrepo.save(d1);
+		}
+	}
+	
+	public void FirstPNR() {
+		DemoPNR pnr=new DemoPNR();
+		pnr.setCount(1);
+		pnr.setPnr(1002029102);
+		pnrrepo.save(pnr);
+	}
+	
+	public DemoPNR GetPNR() {
+		Optional<DemoPNR> d=pnrrepo.findById((long) 1);
+		DemoPNR returnd=new DemoPNR();
+		if(d.isPresent()) {
+			returnd=d.get();
+		}
+		return returnd;
+	}
+	public void UpdatePNR() {
+		Optional<DemoPNR> pnr=pnrrepo.findById((long) 1);
+		if(pnr.isPresent()) {
+			DemoPNR PNR=new DemoPNR();
+			PNR=pnr.get();
+			PNR.setPnr(PNR.getPnr()+1023);
+			pnrrepo.save(PNR);
+		}
+			
+	}
+	/*public void UpdatePNRenquiry(PNRenquiry enquiry) {
+		Optional<DemoPNR> p=pnrrepo.findById((long)1);
+		if(p.isPresent()) {
+			DemoPNR PNR=new DemoPNR();
+			PNR=p.get();
+			PNR.setPnr(PNR.getPnr()+1023);
+			PNR.setEnquiry(enquiry);
+			pnrrepo.save(PNR);
+		}
+	}*/
+	
+	public void addwl(ArrayList<ArrayList<String>> wl) {
+		DemoWaitingList d=new DemoWaitingList();
+		d.setCount(1);
+		d.setWaitinglist(wl);
+		d.setFinallist(wl);
+		wlrepo.save(d);
+	}
+	public DemoWaitingList getwl(){
+		return wlrepo.findById((long)1).get();
+	}
+	
+	public void updatewl(ArrayList<ArrayList<String>> finallist) {
+		DemoWaitingList d=wlrepo.findById((long)1).get();
+		DemoWaitingList d1=new DemoWaitingList();
+		d1=d;
+		d1.setCount(1);
+		d1.setFinallist(finallist);
+		wlrepo.save(d1);
+	}
+
+	public void deletewl() {
+		wlrepo.deleteById((long)1);
+	}
+	
+	
+}
+
+
+
+
+
+package com.h.demo.Service;
+
+
+import java.util.ArrayList;
+import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.h.demo.Repository.GuestdetailsRepo;
+import com.h.demo.model.Trainhistory;
+@Service
+
+public class GuestdetailsService {
+
+	@Autowired
+	private GuestdetailsRepo repo;
+
+	@Autowired
+	private SequenceGeneratorService sequenceService;
+	
+	public Optional<Trainhistory> getbytrainnumber(Long train_no) {
+		Optional<Trainhistory> train=null;
+		train=repo.findByTrain_no(train_no);
+		return train;
+	}
+
+	
+	public void addtrain(Trainhistory train) {
+		train.setTrain_no(sequenceService.generateSequence(Trainhistory.SEQUENCE_NAME));
+		repo.save(train);
+		
+	}
+	
+	
+	public void updatetrain(Trainhistory train) {
+		Optional<Trainhistory> t=repo.findById(train.getTrain_name());
+		Trainhistory t1=new Trainhistory();
+		if(t.isPresent()) {
+			t1=t.get();
+			t1=train;
+			repo.save(t1);
+		}
+	}
+
+
+	public Optional<Trainhistory> getbytrainname(String train_name) {
+		Optional<Trainhistory> train=null;
+		train=repo.findById(train_name);
+		return train;
+	}
+	
+	public ArrayList<Trainhistory> getalltrains(){
+		return (ArrayList<Trainhistory>) repo.findAll();
+	}
+}
