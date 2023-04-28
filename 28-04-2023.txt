@@ -1,0 +1,203 @@
+package com.h.demo.controller;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import com.h.demo.Service.*;
+import com.h.demo.model.*;
+import com.h.demo.model.Registrations.WalletHistory;
+import com.h.demo.model.TempDetails.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+//import com.h.demo.Service.UserService;
+import com.h.demo.model.Registrations.JourneyDetails;
+import com.h.demo.model.Registrations.UserRegister;
+
+
+@RequestMapping(value="/Book")
+@RestController
+public class BookingController {
+	
+	@Autowired
+	private GuestdetailsService service;
+	
+	@Autowired
+	private DemoService demoservice;
+	
+	@Autowired
+	private AdminService adminservice;
+	
+	@Autowired
+	private CoachService coachservice;
+	
+	@Autowired
+	private PNRservice pnrservice;
+	
+	@Autowired
+	private UserService userservice;
+
+	@Autowired
+	private MoneyService moneyService;
+
+	
+	@PostMapping(value="/train/{train_no}/{coach}/{amount}")
+	public String Book(@PathVariable (value = "train_no")long train_no ,@PathVariable (value = "coach") String coach,@PathVariable (value = "amount") long amount) {
+		String result="train details imported successfully";
+		Trainhistory train=new Trainhistory();
+		train=service.getbytrainnumber(train_no).get();
+		if(train!=null) {
+			DemoBookings demo=new DemoBookings();
+			demo=demoservice.getbookingsdemo();
+			demo.setTrain_no(train_no);
+			demo.setCoach(coach);
+			demo.setCount(1);
+			demo.setAmount(amount);
+			demoservice.Updatedemobookings(demo);
+		}else {
+			result="train details not imported/ train does'nt exists";
+		}
+		return result;
+	}
+	
+	@PostMapping(value="/addpassengers")
+	public String Addpassengers(@RequestBody PassengerDetails passenger) {
+		String result="hi";
+		DemoBookings demo=new DemoBookings();
+		demo=demoservice.getbookingsdemo();
+		String[] coach=demo.getCoach().split("-");
+		int count=0;
+		ArrayList<String> preferences=new ArrayList<>();
+		if(coach[0].equals("S")) {
+			count=8;
+			preferences=adminservice.getinfo().getSleeper();
+		}if(coach[0].equals("B")) {
+			count=8;
+			preferences=adminservice.getinfo().getThirdtier();
+		}if(coach[0].equals("A")) {
+			count=4;
+			preferences=adminservice.getinfo().getSecondtier();
+		}
+		ArrayList<PassengerDetails> passengers=new ArrayList<>();
+
+		if(demo.getPassengers()!=null && !demo.getPassengers().isEmpty() && demo.getPassengers().size()!=0) {
+			if(demo.getPassengers().size()<adminservice.getinfo().getNoofseats()) {
+					if(passenger.getPassenger_preference().equals("none") || preferences.contains(passenger.getPassenger_preference())) {
+						if(demo.getPassengers()!=null && !demo.getPassengers().isEmpty() && demo.getPassengers().size()!=0) {
+							if(checkpassengername(demo.getPassengers(),passenger.getPassenger_name())==0) {
+								passengers = demo.getPassengers();
+								//demo.setAmount(demo.getAmount()*(passengers.size()+1));
+								PassengerDetails p = new PassengerDetails();
+								p.setPassenger_name(passenger.getPassenger_name().toLowerCase());
+								p.setPassenger_age(passenger.getPassenger_age());
+								p.setPassenger_preference(passenger.getPassenger_preference());
+								passengers.add(p);
+								demo.setPassengers(passengers);
+								if(checkwallet((demo.getAmount()*(passengers.size()))+adminservice.getinfo().getBooking_charge()).equals("null")){
+									demoservice.Updatedemobookings(demo);
+									result = "passenger " + passenger.getPassenger_name() + " added "+(demo.getAmount()*(passengers.size())) +"from if" +passengers.size();
+								}else{
+									result=checkwallet(demo.getAmount())+" from if"+passengers.size() +" "+(demo.getAmount()*(passengers.size()));
+									result="wallet limit exceeds or else check wallet once";
+								}
+							}else{
+								result="passenger name already exists";
+							}
+						}
+					}else {
+						result="preference should be ";
+						for(int i=0;i<count;i++) {
+							result+=preferences.get(i);
+							result+=" ";
+						}
+						result+="or none only";
+					}
+				}else {
+					result="passenger limit exceeds";
+				}
+		}else {
+			if(checkbookingstatus(demo.getTrain_no(),demo.getDate()).equals("opened")){
+				if(passenger.getPassenger_preference().equals("none") || preferences.contains(passenger.getPassenger_preference())) {
+					PassengerDetails p=new PassengerDetails();
+					p.setPassenger_name(passenger.getPassenger_name().toLowerCase());
+					p.setPassenger_age(passenger.getPassenger_age());
+					p.setPassenger_preference(passenger.getPassenger_preference());
+					passengers.add(p);
+					demo.setPassengers(passengers);
+					if(checkwallet(demo.getAmount()+adminservice.getinfo().getBooking_charge()).equals("null")){
+						demoservice.Updatedemobookings(demo);
+						result = "passenger " + passenger.getPassenger_name() + " added "+(demo.getAmount())+" from else" ;
+					}else{
+						result=checkwallet(demo.getAmount()+adminservice.getinfo().getBooking_charge());
+					}
+				}else {
+					result="preference should be ";
+					for(int i=0;i<count;i++) {
+						result+=preferences.get(i);
+						result+=" ";
+					}
+					result+="or none only";
+				}
+			}else{
+				result="booking status: "+checkbookingstatus(demo.getTrain_no(),demo.getDate());
+			}
+		}
+		return result;
+	}
+
+	private String checkbookingstatus(long train_no,String date){
+		Trainhistory train=new Trainhistory();
+		train=service.getbytrainnumber(train_no).get();
+		String result="";
+		for(int i=0;i<train.getBookinghistory().size();i++){
+			if(train.getBookinghistory().get(i).getDate().equals(date)){
+				result= train.getBookinghistory().get(i).getBooking_status();
+				break;
+			}
+		}
+		return result;
+	}
+	private String checkwallet(long amount){
+		String result="null";
+		if ( userservice.getuserbykey().getWallet_key() != 0) {
+			if (amount <= userservice.getuserbykey().getWallet()) {
+				result="null";
+			} else {
+				result="wallet limit exceeds";
+
+			}
+		}else{
+			result="wallet not found";
+		}
+		return result;
+	}
+	private int checkpassengername(ArrayList<PassengerDetails> passengers,  String name){
+		int r=0;
+		for(int i=0;i<passengers.size();i++){
+			if(passengers.get(i).getPassenger_name().equals(name)){
+				r=1;
+				break;
+			}
+		}
+		return r;
+	}
+	
+	/*private String checknamecount(ArrayList<PassengerDetails> passengers, String passenger_name) {
+		int count=1;
+		for(int i=0;i<passengers.size();i++) {
+			String[] name=passengers.get(i).getPassenger_name().split("@");
+			//count=Integer.parseInt(name[1]);
+			System.out.println(name[0]+"---"+passenger_name+"--"+count);
+			if(name[0].equals(passenger_name)) {
+				count=count+1;
+			}
+		}
+		return String.valueOf(count);
+		
+	}*/
