@@ -1,0 +1,473 @@
+@DeleteMapping(value="/deletepassenger/{index}")
+	public String Deletepassenger(@PathVariable(value="index")int index) {
+		String result="hi";
+		DemoBookings demo=new DemoBookings();
+		demo=demoservice.getbookingsdemo();
+		ArrayList<PassengerDetails> passengers=new ArrayList<>();
+		passengers=demo.getPassengers();
+		if(passengers.get(index-1)!=null){
+			passengers.remove(index-1);
+			demo.setPassengers(passengers);
+			demoservice.Updatedemobookings(demo);
+			result="updated";
+		}else {
+			result="something went wrong";
+		}
+		return result;
+	}
+	
+	@GetMapping(value="/trainquery/{from}/{to}/{date}")
+	public String Gettrains(@PathVariable (value="from") String from,@PathVariable (value="to")String to,@PathVariable(value="date")String date) {
+		DemoBookings demo=new DemoBookings();
+		demo.setDate(date);
+		demo.setFrom(from);
+		demo.setTo(to);
+		demoservice.addbookingsdemo(demo);
+		return "bookings imported success";
+	}
+	
+	
+	@GetMapping(value="/specifictrain/{train_no}/{coach}")
+	public String Getspecifiedtrain(@PathVariable (value="train_no") long train_no,@PathVariable (value="coach")String coach) {
+		
+		String result="train details imported";
+		DemoBookings demo=new DemoBookings();
+		demo=demoservice.getbookingsdemo();
+		if(demo!=null) {
+			demo.setTrain_no(train_no);
+			demo.setCoach(coach);
+			//Trainhistory train=new Trainhistory();
+			/*train=service.getbytrainnumber(demo.getTrain_no()).get();
+			Bookinghistory b=new Bookinghistory();
+			for(int i=0;i<train.getBookinghistory().size();i++) {
+				if(train.getBookinghistory().get(i).getDate().equals(demo.getDate())) {
+					b=train.getBookinghistory().get(i);
+					break;
+				}
+			}
+			if(coach.equals("S")) {
+				demo.setAmount(b.getBookingdetails().getSleeper().getAmount());
+			}if(coach.equals("B")) {
+				demo.setAmount(b.getBookingdetails().getThirdtier().getAmount());
+			}if(coach.equals("A")) {
+				demo.setAmount(b.getBookingdetails().getSecondtier().getAmount());
+			}*/
+			demoservice.Updatedemobookings(demo);
+		}else {
+			result="bookings not imported";
+		}
+		return result;
+	}
+	
+	@PostMapping(value="/addpass")
+	public String Addpassenger(@RequestBody PassengerDetails passenger) {
+		String result="train details imported";
+		DemoBookings demo=new DemoBookings();
+		demo=demoservice.getbookingsdemo();
+		if(demo!=null) {
+			Trainhistory train=new Trainhistory();
+			train=service.getbytrainnumber(demo.getTrain_no()).get();
+			Bookinghistory b=new Bookinghistory();
+			for(int i=0;i<train.getBookinghistory().size();i++) {
+				if(train.getBookinghistory().get(i).getDate().equals(demo.getDate())) {
+					b=train.getBookinghistory().get(i);
+					break;
+				}
+			}
+			long amt=demo.getAmount();
+			if(demo.getCoach().equals("S")) {
+				amt=b.getBookingdetails().getSleeper().getAmount();
+			}if(demo.getCoach().equals("B")) {
+				amt=b.getBookingdetails().getThirdtier().getAmount();
+			}if(demo.getCoach().equals("A")) {
+				amt=b.getBookingdetails().getSecondtier().getAmount();
+			}
+			
+			int from=10,to = 10;
+			for(int i=0;i<b.getRoute().size();i++) {
+				if(b.getRoute().get(i).equals(demo.getFrom())) {
+					from=i+1;
+				}if(b.getRoute().get(i).equals(demo.getTo())) {
+					to=i+1;
+				}
+			}
+			amt=amt*(to-from);
+			if(demo.getPassengers()==null) {
+				ArrayList<PassengerDetails> passengers=new ArrayList<>();
+				passengers.add(passenger);
+				demo.setPassengers(passengers);
+				demo.setAmount(amt);
+			}else {
+				ArrayList<PassengerDetails> passengers=new ArrayList<>();
+				passengers=demo.getPassengers();
+				passengers.add(passenger);
+				demo.setPassengers(passengers);
+				demo.setAmount(amt*passengers.size());
+			}
+			demoservice.Updatedemobookings(demo);
+		}else {
+			result="bookings not imported";
+		}
+		return result;
+	}
+	
+	@PostMapping(value="/Bookticket")
+	public BookingReturn Bookticket() throws TrainException{
+		BookingReturn bb=new BookingReturn();
+		DemoBookings demo=new DemoBookings();
+		demo=demoservice.getbookingsdemo();
+		//if(demo.getAmount()<=userservice.getuserbykey().getWallet()) {
+		Trainhistory train=new Trainhistory();
+		train=service.getbytrainnumber(demo.getTrain_no()).get();
+		Bookinghistory b=new Bookinghistory();
+		try {
+			int index=-6;
+			for(int i=0;i<train.getBookinghistory().size();i++) {
+				if(train.getBookinghistory().get(i).getDate().equals(demo.getDate())) {
+					b=train.getBookinghistory().get(i);
+					index=i;
+					break;
+				}
+			}if(b!=null) {
+				if(b.getBooking_status().equals("opened")) {
+					int userfrom=0,userto=0;
+					for(int i=0;i<train.getRoute().size();i++) {
+						if(demo.getFrom().equals(train.getRoute().get(i))) {
+							userfrom=i;
+						}
+						if(demo.getTo().equals(train.getRoute().get(i))) {
+							userto=i;
+						}
+					}
+					Bookingdetails bookings=new Bookingdetails();
+					bookings=b.getBookingdetails();
+					BookingTicket bt=new BookingTicket();
+					if(demo.getCoach().equals("S")) {
+						bt=bookticketcode(b.getBookingdetails().getSleeper(),demo,userfrom,userto,train,b.getRoute());
+						bookings.setSleeper(bt.getCoach());
+						//coachservice.deletedemocoach();
+					}else if(demo.getCoach().equals("B")) {
+						bt=bookticketcode(b.getBookingdetails().getThirdtier(),demo,userfrom,userto,train,b.getRoute());
+						bookings.setThirdtier(bt.getCoach());
+					}else if(demo.getCoach().equals("A")) {
+						bt=bookticketcode(b.getBookingdetails().getSecondtier(),demo,userfrom,userto,train,b.getRoute());
+						bookings.setSecondtier(bt.getCoach());
+					}
+					b.setBookingdetails(bookings);
+					ArrayList<Bookinghistory> blist=new ArrayList<>();
+					blist=train.getBookinghistory();
+					blist.set(index, b);
+					train.setBookinghistory(blist);
+					bb.setPnr(bt.getPnr());
+					bb.setFrom(bt.getFrom());
+					bb.setTo(bt.getTo());
+					bb.setDate(bt.getDate());
+					bb.setPassengers(bt.getPassengers());
+					bb.setMessage("booking completed");
+					AddPNRinList(bt.getPnr(),bt.getDemopnrstring());
+					service.updatetrain(train);
+					DemoDetails d=new DemoDetails();
+					d.setTrain(train);
+					demoservice.updatedemotrain(d);
+				}else {
+					bb.setMessage("booking status not opened");				}
+			}else {
+				bb.setMessage("bookings not started yet");			}
+		}catch(TrainException e) {
+			bb.setMessage("error occurs");
+		}
+		//}else {
+	//		bb.setMessage("wallet limit exceeds");
+	//	}
+		return bb;
+	}
+
+
+	private BookingTicket bookticketcode(Coachdetails coach, DemoBookings demo,int userfrom,int userto,Trainhistory train,ArrayList<String> routes) throws TrainException{
+		DemoCoach democoach=new DemoCoach();
+		democoach.setCoach(coach);
+		coachservice.Adddemocoach(democoach);
+		demoservice.UpdatePNR();
+		BookingTicket booking=new BookingTicket();
+		booking.setFrom(demo.getFrom());
+		booking.setTo(demo.getTo());
+		booking.setDate(demo.getDate());
+		booking.setPnr(demoservice.GetPNR().getPnr());
+		ArrayList<PassengerDetails> passengers=new ArrayList<>();
+		ArrayList<String> demoPNR=new ArrayList<>();
+		for(int no_passengers=0;no_passengers<demo.getPassengers().size();no_passengers++) {
+			ArrayList<Integer> preference_array=new ArrayList<>();
+			ArrayList<String> temppreference_array=new ArrayList<>();temppreference_array=coachservice.getdemo().getCoach().getPreferenceposition();
+			for(int preference_iteration=0;preference_iteration<temppreference_array.size();preference_iteration++) {
+				if(demo.getPassengers().get(no_passengers).getPassenger_preference().equals(temppreference_array.get(preference_iteration))) {
+					preference_array.add(preference_iteration);
+					System.out.println(preference_iteration);
+				}
+			}
+			int flag=0;
+			String pnrstatusstring = null;
+			PassengerDetails temp_p=new PassengerDetails();
+			Coachdetails tempcoach=new Coachdetails();tempcoach=coachservice.getdemo().getCoach();
+			if(preference_array!=null) {
+			for(int coach_iteration=0;coach_iteration<tempcoach.getCoachtypes().size();coach_iteration++) {
+				for(int preference_it=0;preference_it<preference_array.size();preference_it++) {
+					ArrayList<String> seatdetails=new ArrayList<>();
+					if(tempcoach.getCoachtypes().get(coach_iteration).getSeatdetails().get(preference_array.get(preference_it)).get(0).equals("null")) {
+						System.out.println("inside 274");
+						System.out.println(preference_array);
+						flag=1;
+						seatdetails.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+demoservice.GetPNR().getPnr());
+						ArrayList<ArrayList<String>> seats=new ArrayList<>();
+						seats=tempcoach.getCoachtypes().get(coach_iteration).getSeatdetails();
+						seats.set(preference_array.get(preference_it), seatdetails);
+						DemoCoach d=new DemoCoach();
+						d=coachservice.getdemo();
+						d.getCoach().getCoachtypes().get(coach_iteration).setSeatdetails(seats);
+						coachservice.updatedemocoach(d);
+						temp_p.setPassenger_name(demo.getPassengers().get(no_passengers).getPassenger_name());
+						temp_p.setPassenger_age(demo.getPassengers().get(no_passengers).getPassenger_age());
+						temp_p.setPassenger_preference(demo.getPassengers().get(no_passengers).getPassenger_preference());
+						temp_p.setBirth(demo.getPassengers().get(no_passengers).getPassenger_preference());
+						temp_p.setCoach(tempcoach.getCoachtypes().get(coach_iteration).getCoach_name());
+						temp_p.setSeat_no(preference_array.get(preference_it)+1);
+						temp_p.setStatus("confirmed");
+						int seat_number=preference_array.get(preference_it)+1;
+						pnrstatusstring=train.getTrain_no()+"--"+demo.getDate()+"--"+tempcoach.getCoachtypes().get(coach_iteration).getCoach_name()+"--"+seat_number+"--"+demo.getFrom()+
+								"--"+demo.getTo()+"--"+demo.getPassengers().get(no_passengers).getPassenger_name()+"--"+demo.getPassengers().get(no_passengers).getPassenger_age()+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference()+"--"+"confirmed"+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference();
+						break;
+					}else {
+						int seat_count=0;
+						seatdetails=tempcoach.getCoachtypes().get(coach_iteration).getSeatdetails().get(preference_array.get(preference_it));
+						for(int seatdetails_it=0;seatdetails_it<seatdetails.size();seatdetails_it++) {
+							int s1=-8,s2=-9;
+							String[] seatdetailsp=seatdetails.get(seatdetails_it).split("-");
+							for(int station_it=0;station_it<routes.size();station_it++) {
+								if(seatdetailsp[0].equals(routes.get(station_it))) {
+									s1=station_it;
+								}if(seatdetailsp[1].equals(routes.get(station_it))) {
+									s2=station_it;
+								}
+							}
+							if(!((s1<=userfrom && userfrom<s2)||(s1<userto && userto<=s2))){
+								if(!((userfrom<s1 && userfrom<s2)&&(s1<userto && s2<userto))){
+									if(!(s1==userfrom && s2==userto)) {
+										seat_count++;
+										System.out.println("inside 302");
+									//	seatdetails.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+"1");
+										
+									}
+								}
+							}if(seat_count==seatdetails.size()) {
+								seatdetails.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+demoservice.GetPNR().getPnr());
+								ArrayList<ArrayList<String>> seats=new ArrayList<>();
+								seats=tempcoach.getCoachtypes().get(coach_iteration).getSeatdetails();
+								seats.set(preference_array.get(preference_it), seatdetails);
+								DemoCoach d=new DemoCoach();
+								d=coachservice.getdemo();
+								d.getCoach().getCoachtypes().get(coach_iteration).setSeatdetails(seats);
+								coachservice.updatedemocoach(d);
+								temp_p.setPassenger_name(demo.getPassengers().get(no_passengers).getPassenger_name());
+								temp_p.setPassenger_age(demo.getPassengers().get(no_passengers).getPassenger_age());
+								temp_p.setPassenger_preference(demo.getPassengers().get(no_passengers).getPassenger_preference());
+								temp_p.setBirth(demo.getPassengers().get(no_passengers).getPassenger_preference());
+								temp_p.setCoach(tempcoach.getCoachtypes().get(coach_iteration).getCoach_name());
+								temp_p.setSeat_no(preference_array.get(preference_it)+1);
+								temp_p.setStatus("confirmed");
+								int seat_number=preference_array.get(preference_it)+1;
+								pnrstatusstring=train.getTrain_no()+"--"+demo.getDate()+"--"+tempcoach.getCoachtypes().get(coach_iteration).getCoach_name()+"--"+seat_number+"--"+demo.getFrom()+
+										"--"+demo.getTo()+"--"+demo.getPassengers().get(no_passengers).getPassenger_name()+"--"+demo.getPassengers().get(no_passengers).getPassenger_age()+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference()+"--"+"confirmed"+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference();
+								flag=1;
+								break;
+							}
+						}
+					}
+					if(flag==1) {
+						break;
+					}
+				}
+				if(flag==1) {
+					break;
+				}
+			}
+			}
+			if(flag==0) {
+				for(int coach_iteration=0;coach_iteration<tempcoach.getCoachtypes().size();coach_iteration++) {
+					for(int seat_iteration=0;seat_iteration<tempcoach.getCoachtypes().get(coach_iteration).getSeatdetails().size();seat_iteration++){
+						ArrayList<String> seatdetails=new ArrayList<>();
+						if(tempcoach.getCoachtypes().get(coach_iteration).getSeatdetails().get(seat_iteration).get(0).equals("null")) {
+							seatdetails.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+demoservice.GetPNR().getPnr());
+							ArrayList<ArrayList<String>> seats=new ArrayList<>();
+							seats=tempcoach.getCoachtypes().get(coach_iteration).getSeatdetails();
+							seats.set(seat_iteration, seatdetails);
+							DemoCoach d=new DemoCoach();
+							d=coachservice.getdemo();
+							d.getCoach().getCoachtypes().get(coach_iteration).setSeatdetails(seats);
+							coachservice.updatedemocoach(d);
+							System.out.println("inside 340");
+							flag=1;
+							temp_p.setPassenger_name(demo.getPassengers().get(no_passengers).getPassenger_name());
+							temp_p.setPassenger_age(demo.getPassengers().get(no_passengers).getPassenger_age());
+							temp_p.setPassenger_preference(demo.getPassengers().get(no_passengers).getPassenger_preference());
+							temp_p.setBirth(temppreference_array.get(seat_iteration));
+							temp_p.setCoach(tempcoach.getCoachtypes().get(coach_iteration).getCoach_name());
+							temp_p.setSeat_no(seat_iteration+1);
+							temp_p.setStatus("confirmed");
+							int seat_number=seat_iteration+1;
+							pnrstatusstring=train.getTrain_no()+"--"+demo.getDate()+"--"+tempcoach.getCoachtypes().get(coach_iteration).getCoach_name()+"--"+seat_number+"--"+demo.getFrom()+
+									"--"+demo.getTo()+"--"+demo.getPassengers().get(no_passengers).getPassenger_name()+"--"+demo.getPassengers().get(no_passengers).getPassenger_age()+"--"+temppreference_array.get(seat_iteration)+"--"+"confirmed"+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference();
+							break;
+						}else {
+							int seat_count=0;
+							seatdetails=tempcoach.getCoachtypes().get(coach_iteration).getSeatdetails().get(seat_iteration);
+							for(int seatdetails_it=0;seatdetails_it<seatdetails.size();seatdetails_it++) {
+								int s1=-8,s2=-9;
+								String[] seatdetailsp=seatdetails.get(seatdetails_it).split("-");
+								for(int station_it=0;station_it<routes.size();station_it++) {
+									if(seatdetailsp[0].equals(routes.get(station_it))) {
+										s1=station_it;
+									}if(seatdetailsp[1].equals(routes.get(station_it))) {
+										s2=station_it;
+									}
+								}
+								if(!((s1<=userfrom && userfrom<s2)||(s1<userto && userto<=s2))){
+									if(!((userfrom<s1 && userfrom<s2)&&(s1<userto && s2<userto))){
+										if(!(s1==userfrom && s2==userto)) {
+											seat_count++;
+											System.out.println("inside 359");
+											System.out.println(seatdetailsp[0]+"--"+seatdetailsp[1]);
+											//seatdetails.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+"1");
+											
+										}
+									}
+								}
+							}
+							if(seat_count==seatdetails.size()) {
+								ArrayList<ArrayList<String>> seats=new ArrayList<>();
+								seats=tempcoach.getCoachtypes().get(coach_iteration).getSeatdetails();
+								seatdetails.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+demoservice.GetPNR().getPnr());
+								seats.set(seat_iteration, seatdetails);
+								DemoCoach d=new DemoCoach();
+								d=coachservice.getdemo();
+								d.getCoach().getCoachtypes().get(coach_iteration).setSeatdetails(seats);
+								coachservice.updatedemocoach(d);
+								temp_p.setPassenger_name(demo.getPassengers().get(no_passengers).getPassenger_name());
+								temp_p.setPassenger_age(demo.getPassengers().get(no_passengers).getPassenger_age());
+								temp_p.setPassenger_preference(demo.getPassengers().get(no_passengers).getPassenger_preference());
+								temp_p.setBirth(temppreference_array.get(seat_iteration));
+								temp_p.setCoach(tempcoach.getCoachtypes().get(coach_iteration).getCoach_name());
+								temp_p.setSeat_no(seat_iteration+1);
+								temp_p.setStatus("confirmed");
+								int seat_number=seat_iteration+1;
+								pnrstatusstring=train.getTrain_no()+"--"+demo.getDate()+"--"+tempcoach.getCoachtypes().get(coach_iteration).getCoach_name()+"--"+seat_number+"--"+demo.getFrom()+
+										"--"+demo.getTo()+"--"+demo.getPassengers().get(no_passengers).getPassenger_name()+"--"+demo.getPassengers().get(no_passengers).getPassenger_age()+"--"+temppreference_array.get(seat_iteration)+"--"+"confirmed"+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference();
+								flag=1;
+								break;
+							}
+						}
+						if(flag==1) {
+							break;
+						}
+					}
+					if(flag==1) {
+						break;
+					}
+				}
+			}
+			if(flag==0) {
+				ArrayList<ArrayList<String>> waitinglists=new ArrayList<ArrayList<String>>();
+				waitinglists=tempcoach.getWaitinglists();
+				if(waitinglists!=null) {
+					if(!waitinglists.isEmpty() && waitinglists.size()!=0) {
+						for(int waitinglist_iteration=0;waitinglist_iteration<waitinglists.size();waitinglist_iteration++) {
+							ArrayList<String> waitings=new ArrayList<>();
+							waitings=waitinglists.get(waitinglist_iteration);
+							String waiting_info[]=waitings.get(0).split("-");
+							if(demo.getFrom().equals(waiting_info[0]) && demo.getTo().equals(waiting_info[1])) {
+								waitings.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+demoservice.GetPNR().getPnr());
+								waitinglists.set(waitinglist_iteration, waitings);
+								DemoCoach d=new DemoCoach();
+								d=coachservice.getdemo();
+								d.getCoach().setWaitinglists(waitinglists);
+								flag=1;
+								coachservice.updatedemocoach(d);
+								temp_p.setPassenger_name(demo.getPassengers().get(no_passengers).getPassenger_name());
+								temp_p.setPassenger_age(demo.getPassengers().get(no_passengers).getPassenger_age());
+								temp_p.setPassenger_preference(demo.getPassengers().get(no_passengers).getPassenger_preference());
+								temp_p.setBirth("NA");
+								temp_p.setCoach(demo.getCoach());
+								temp_p.setSeat_no(0);
+								int wl_c=waitings.size();
+								temp_p.setStatus("WL "+wl_c);
+								pnrstatusstring=train.getTrain_no()+"--"+demo.getDate()+"--"+demo.getCoach()+"--"+0+"--"+demo.getFrom()+
+										"--"+demo.getTo()+"--"+demo.getPassengers().get(no_passengers).getPassenger_name()+"--"+demo.getPassengers().get(no_passengers).getPassenger_age()+"--"+"NA"+"--"+"waiting"+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference();
+								break;
+							}
+						}
+						if(flag==0) {
+							ArrayList<String> waitings=new ArrayList<>();
+							waitings.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+demoservice.GetPNR().getPnr());
+							waitinglists.add(waitings);
+							DemoCoach d=new DemoCoach();
+							d=coachservice.getdemo();
+							d.getCoach().setWaitinglists(waitinglists);
+							flag=1;
+							coachservice.updatedemocoach(d);
+							temp_p.setPassenger_name(demo.getPassengers().get(no_passengers).getPassenger_name());
+							temp_p.setPassenger_age(demo.getPassengers().get(no_passengers).getPassenger_age());
+							temp_p.setPassenger_preference(demo.getPassengers().get(no_passengers).getPassenger_preference());
+							temp_p.setBirth("NA");
+							temp_p.setCoach(demo.getCoach());
+							temp_p.setSeat_no(0);
+							temp_p.setStatus("WL 1");
+							pnrstatusstring=train.getTrain_no()+"--"+demo.getDate()+"--"+demo.getCoach()+"--"+0+"--"+demo.getFrom()+
+									"--"+demo.getTo()+"--"+demo.getPassengers().get(no_passengers).getPassenger_name()+"--"+demo.getPassengers().get(no_passengers).getPassenger_age()+"--"+"NA"+"--"+"waiting"+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference();
+						}
+					}else {
+						ArrayList<String> waitings=new ArrayList<>();
+						waitings.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+demoservice.GetPNR().getPnr());
+						waitinglists.add(waitings);
+						DemoCoach d=new DemoCoach();
+						d=coachservice.getdemo();
+						d.getCoach().setWaitinglists(waitinglists);
+						flag=1;
+						coachservice.updatedemocoach(d);
+						temp_p.setPassenger_name(demo.getPassengers().get(no_passengers).getPassenger_name());
+						temp_p.setPassenger_age(demo.getPassengers().get(no_passengers).getPassenger_age());
+						temp_p.setPassenger_preference(demo.getPassengers().get(no_passengers).getPassenger_preference());
+						temp_p.setBirth("NA");
+						temp_p.setCoach(demo.getCoach());
+						temp_p.setSeat_no(0);
+						temp_p.setStatus("WL 1");
+						pnrstatusstring=train.getTrain_no()+"--"+demo.getDate()+"--"+demo.getCoach()+"--"+0+"--"+demo.getFrom()+
+								"--"+demo.getTo()+"--"+demo.getPassengers().get(no_passengers).getPassenger_name()+"--"+demo.getPassengers().get(no_passengers).getPassenger_age()+"--"+"NA"+"--"+"waiting"+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference();
+					}
+				}else {
+					ArrayList<ArrayList<String>> list=new ArrayList<>();
+					ArrayList<String> waitings=new ArrayList<>();
+					waitings.add(demo.getFrom()+"-"+demo.getTo()+"-"+demo.getPassengers().get(no_passengers).getPassenger_name()+"-"+demoservice.GetPNR().getPnr());
+					list.add(waitings);
+					DemoCoach d=new DemoCoach();
+					d=coachservice.getdemo();
+					d.getCoach().setWaitinglists(list);
+					flag=1;
+					coachservice.updatedemocoach(d);
+					temp_p.setPassenger_name(demo.getPassengers().get(no_passengers).getPassenger_name());
+					temp_p.setPassenger_age(demo.getPassengers().get(no_passengers).getPassenger_age());
+					temp_p.setPassenger_preference(demo.getPassengers().get(no_passengers).getPassenger_preference());
+					temp_p.setBirth("NA");
+					temp_p.setCoach(demo.getCoach());
+					temp_p.setSeat_no(0);
+					temp_p.setStatus("WL 1");
+					pnrstatusstring=train.getTrain_no()+"--"+demo.getDate()+"--"+demo.getCoach()+"--"+0+"--"+demo.getFrom()+
+							"--"+demo.getTo()+"--"+demo.getPassengers().get(no_passengers).getPassenger_name()+"--"+demo.getPassengers().get(no_passengers).getPassenger_age()+"--"+"NA"+"--"+"waiting"+"--"+demo.getPassengers().get(no_passengers).getPassenger_preference();
+				}
+			}
+			passengers.add(temp_p);
+			demoPNR.add(pnrstatusstring);
+		}
+		booking.setCoach(coachservice.getdemo().getCoach());
+		booking.setPassengers(passengers);
+		booking.setDemopnrstring(demoPNR);
+		return booking;
+	}
+	
